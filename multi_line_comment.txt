@@ -1,0 +1,20 @@
+# No multi line comments, paste stuff here 
+
+
+train_ds = tf.keras.preprocessing.image_dataset_from_directory(
+    image_folder,
+    validation_split=0.2,  # 20 percent of the images are for validation, the rest for training. Not needed when model is generating images?
+    subset="training",
+    seed=123,
+    image_size=(img_height, img_width),
+    batch_size=batch_size)
+
+val_ds = tf.keras.preprocessing.image_dataset_from_directory(
+    image_folder,
+    validation_split=0.2,
+    subset="validation",
+    seed=123,
+    image_size=(img_height, img_width),
+    batch_size=batch_size)
+
+print(train_ds.class_names)
