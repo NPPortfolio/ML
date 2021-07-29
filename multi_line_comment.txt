@@ -1,5 +1,8 @@
 # No multi line comments, paste stuff here 
 
+batch_size = 32
+img_height = 150
+img_width = 150
 
 train_ds = tf.keras.preprocessing.image_dataset_from_directory(
     image_folder,
