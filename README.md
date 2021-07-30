@@ -1,5 +1,9 @@
 # Data
 Data taken from:
-https://www.kaggle.com/nitishabharathi/scene-classification
-CC0 Public Domain
+
+Places: A 10 million Image Database for Scene Recognition
+B. Zhou, A. Lapedriza, A. Khosla, A. Oliva, and A. Torralba
+IEEE Transactions on Pattern Analysis and Machine Intelligence, 2017
+
+http://places2.csail.mit.edu/
 
