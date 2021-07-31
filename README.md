@@ -7,3 +7,6 @@ IEEE Transactions on Pattern Analysis and Machine Intelligence, 2017
 
 http://places2.csail.mit.edu/
 
+
+# Notes
+arctic is snowfield folder
