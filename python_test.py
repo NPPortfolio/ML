@@ -38,10 +38,21 @@ val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
 # Tensorflow tutorial "Image classification"
 
-model = tf.keras.Sequential([
-  tf.keras.layers.experimental.preprocessing.Rescaling(1./255), # Convert rbg values from [0, 255] to [0, 1]
-])
+# model = tf.keras.Sequential([
+  # tf.keras.layers.experimental.preprocessing.Rescaling(1./255), # Convert rbg values from [0, 255] to [0, 1]
+# ])
 
+model = tf.keras.Sequential()
+model.add(tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)))
+model.add(tf.keras.layers.MaxPooling2D((2, 2)))
+model.add(tf.keras.layers.Conv2D(64, (3, 3), activation='relu'))
+model.add(tf.keras.layers.MaxPooling2D((2, 2)))
+model.add(tf.keras.layers.Conv2D(64, (3, 3), activation='relu'))
 
+model.add(tf.keras.layers.Flatten())
+model.add(tf.keras.layers.Dense(64, activation='relu'))
+model.add(tf.keras.layers.Dense(10))
+
+model.summary()
 
 
