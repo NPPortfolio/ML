@@ -29,24 +29,24 @@ val_ds = tf.keras.preprocessing.image_dataset_from_directory(
 train_ds = train_ds.take(10)
 val_ds = val_ds.take(10)
 
-AUTOTUNE = tf.data.AUTOTUNE # Tune the buffer size dynamically at runtime
+# Tune the buffer size dynamically at runtime
+AUTOTUNE = tf.data.AUTOTUNE
 
 # cache() keeps images in memory after first epoch
 # prefetch() overlaps image preprocessing and model execution (total time is max instead of sum)
 train_ds = train_ds.cache().prefetch(buffer_size=AUTOTUNE)
 val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
-
-# Tensorflow tutorial "Image classification"
-
 num_classes = 8
 
 # 1st param (16, 32, 64) Dimensionality of output space, or number of output filters in convolution
-# 2nd param (3): Kernel size, 3x3 matrix of weights to slide over the input data
+# 2nd param (5): Kernel size, 5x5 matrix of weights to slide over the input data
 
 # MaxPooling() : Downsamples the input, by default it is by half in each dimension (1/4)
 
-# Dense() and Flatten() : Reorganize the tensor to represent the input (256 * 256 * 3) ? more about this
+# Dense() : Layer where every node in the previous layer connects to every node in this (dense) layer
+
+# relu : Max between 0 and input
 
 model = tf.keras.Sequential([
   tf.keras.layers.experimental.preprocessing.Rescaling(1./255, input_shape=(img_height, img_width, 3)),
@@ -60,6 +60,8 @@ model = tf.keras.Sequential([
   tf.keras.layers.Dense(64, activation='relu'),
   tf.keras.layers.Dense(num_classes)
 ])
+
+# Adam is a variant of SGD
 
 model.compile(optimizer='adam',
               loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
