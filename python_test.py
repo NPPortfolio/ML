@@ -8,7 +8,7 @@ import pathlib
 #  Tensorflow tutorial "Load and preprocess images"
 
 train_folder = pathlib.Path('./data/train')
-val_folder = pathlib.Path('./data/val')
+test_folder = pathlib.Path('./data/test')
 
 batch_size = 32
 img_height = 256
@@ -17,11 +17,24 @@ img_width = 256
 train_ds = tf.keras.preprocessing.image_dataset_from_directory(
     train_folder,
     seed=123,
+    validation_split=0.1,
+    subset="training",
     image_size=(img_height, img_width),
-    batch_size=batch_size)
+    batch_size=batch_size
+)
 
+# Allows you to see how well the model is generalizing during training (not overfitting)
 val_ds = tf.keras.preprocessing.image_dataset_from_directory(
-    val_folder,
+    train_folder,
+    seed=123,
+    validation_split=0.1,
+    subset="validation",
+    image_size=(img_height, img_width),
+    batch_size=batch_size
+)
+# Test the trained model with these, shouldn't have labels
+test_ds = tf.keras.preprocessing.image_dataset_from_directory(
+    test_folder,
     seed=123,
     image_size=(img_height, img_width),
     batch_size=batch_size)
