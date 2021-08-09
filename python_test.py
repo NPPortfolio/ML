@@ -39,8 +39,8 @@ test_ds = tf.keras.preprocessing.image_dataset_from_directory(
     image_size=(img_height, img_width),
     batch_size=batch_size)
 
-train_ds = train_ds.take(10)
-val_ds = val_ds.take(10)
+train_ds = train_ds.take(100)
+val_ds = val_ds.take(100)
 
 # Tune the buffer size dynamically at runtime
 AUTOTUNE = tf.data.AUTOTUNE
@@ -53,13 +53,15 @@ val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 num_classes = 8
 
 # 1st param (16, 32, 64) Dimensionality of output space, or number of output filters in convolution
-# 2nd param (5): Kernel size, 5x5 matrix of weights to slide over the input data
+# 2nd param (5): Filter size, 5x5 matrix of weights to slide over the input data
+# 3rd param (padding): 'Same' pads input with 0's so the output has the same dimensions as the input
+# 4th param (activation): Activation function, 'relu' is maximum of 0 and input
 
-# MaxPooling() : Downsamples the input, by default it is by half in each dimension (1/4)
+# MaxPooling() : Downsamples the next layer's input (new representation of input created by previous layer's convolution),
+#                by default it is by half in each dimension (1/4). MaxPooling takes maximum value of 2x2 square of pixels
+# ^ Picks out the "most activated" pixels and preserves the values moving forward
 
 # Dense() : Layer where every node in the previous layer connects to every node in this (dense) layer
-
-# relu : Max between 0 and input
 
 model = tf.keras.Sequential([
   tf.keras.layers.experimental.preprocessing.Rescaling(1./255, input_shape=(img_height, img_width, 3)),
@@ -70,8 +72,9 @@ model = tf.keras.Sequential([
   tf.keras.layers.Conv2D(64, 5, padding='same', activation='relu'),
   tf.keras.layers.MaxPooling2D(),
   tf.keras.layers.Flatten(),
-  tf.keras.layers.Dense(64, activation='relu'),
-  tf.keras.layers.Dense(num_classes)
+  # Need to figure out what to do for these next two, right now I think this is wrong dimension wise
+  # tf.keras.layers.Dense(64, activation='relu'),
+  tf.keras.layers.Dense(num_classes) # The final layer that tells how activated each label is
 ])
 
 # Adam is a variant of SGD
@@ -80,7 +83,7 @@ model.compile(optimizer='adam',
               loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
               metrics=['accuracy'])
 
-# model.summary()
+model.summary()
 
 # Training
 
