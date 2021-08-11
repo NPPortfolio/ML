@@ -5,9 +5,11 @@ import PIL
 import PIL.Image
 import pathlib
 
+# Note: Right now I'm just running these functions from vscodes terminal and the python interpreter so I can train, save, and load the model easier
+# There could be something wrong with doing 1 epoch at a time though, fit might scramble the inputs between a multi epoch call, need to look into more
+# Also need to look into the datasets caching, see if this setup messes it up
 
-
-def createAndTrain():
+def create_datasets():
 
     train_folder = pathlib.Path('./data/train')
     test_folder = pathlib.Path('./data/test')
@@ -34,6 +36,7 @@ def createAndTrain():
         image_size=(img_height, img_width),
         batch_size=batch_size
     )
+
     # Test the trained model with these, shouldn't have labels
     test_ds = tf.keras.preprocessing.image_dataset_from_directory(
         test_folder,
@@ -52,7 +55,15 @@ def createAndTrain():
     train_ds = train_ds.cache().prefetch(buffer_size=AUTOTUNE)
     val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
+    return (train_ds, val_ds, test_ds)
+
+def create_model():
+
     num_classes = 8
+
+    batch_size = 32
+    img_height = 256
+    img_width = 256
 
     # 1st param (16, 32, 64) Dimensionality of output space, or number of output filters in convolution
     # 2nd param (5): Filter size, 5x5 matrix of weights to slide over the input data
@@ -73,12 +84,13 @@ def createAndTrain():
         tf.keras.layers.Conv2D(32, 5, padding='same', activation='relu'),
         tf.keras.layers.MaxPooling2D(),
         #tf.keras.layers.Conv2D(64, 5, padding='same', activation='relu'),
-        #tf.keras.layers.MaxPooling2D(),
+        # tf.keras.layers.MaxPooling2D(),
         tf.keras.layers.Flatten(),
         # Need to figure out what to do for these next two, right now I think this is wrong dimension wise
         # tf.keras.layers.Dense(64, activation='relu'),
         # The final layer that tells how activated each label is
-        tf.keras.layers.Dense(num_classes) # TODO: want something like softmax for last layer
+        # TODO: want something like softmax for last layer
+        tf.keras.layers.Dense(num_classes)
     ])
 
     # Adam is a variant of SGD
@@ -90,30 +102,30 @@ def createAndTrain():
 
     model.summary()
 
-    # Training
+    return model
 
-    epochs = 5
+# Mutator, need to know for interpreter
+def train_model(model, train_ds, val_ds, epochs):
 
     model.fit(
         train_ds,
         validation_data=val_ds,
         epochs=epochs,
-        verbose = 1 
+        verbose=1
     )
 
-    # Incorrect
+# hardcoded but dont want to keep passing in filename
+def load_model():
+    model = 0
+    try:
+        model = tf.keras.models.load_model('model.h5')
+    except (ImportError, IOError) as e:
+        print(e)
+        return None # bad
     return model
 
+def save_model(model):
+    model.save('model.h5')
 
-# TODO: It is probably best to just save the weights of the model once I get the network's structure set in stone
-# That way I can set up something where I can continue to train the loaded weights and save training progress
-
-# Tests: After 5 epochs, using only 100 images from each category (I think) for train and 10 for val, accuracy is at ~75% (20-25 min)
-x = 0
-
-try:
-    x = tf.keras.models.load_model('model.h5')
-except (ImportError, IOError) as e:
-    x = createAndTrain()
-
-# x.save('model.h5')
+# testing
+d = create_datasets()

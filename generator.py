@@ -1,0 +1,1 @@
+# This is where I'll start on the generator part of the gan, a lot to look into
