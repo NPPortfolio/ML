@@ -1,6 +1,7 @@
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import time
+import pathlib
 
 from tensorflow.keras import layers
 
@@ -9,17 +10,73 @@ from tensorflow.keras import layers
 # As I go I will tweak to fit with the landscape generator ideas
 
 
+def create_datasets():
+
+    train_folder = pathlib.Path('./data/train')
+    test_folder = pathlib.Path('./data/test')
+
+    batch_size = 32
+    img_height = 256
+    img_width = 256
+
+    train_ds = tf.keras.preprocessing.image_dataset_from_directory(
+        train_folder,
+        seed=123,
+        validation_split=0.1,
+        subset="training",
+        image_size=(img_height, img_width),
+        batch_size=batch_size,
+        label_mode=None  # Eventually changed
+    )
+
+    # Allows you to see how well the model is generalizing during training (not overfitting)
+    val_ds = tf.keras.preprocessing.image_dataset_from_directory(
+        train_folder,
+        seed=123,
+        validation_split=0.1,
+        subset="validation",
+        image_size=(img_height, img_width),
+        batch_size=batch_size,
+        label_mode=None  # Eventually changed
+    )
+
+    # Test the trained model with these, shouldn't have labels
+    test_ds = tf.keras.preprocessing.image_dataset_from_directory(
+        test_folder,
+        seed=123,
+        image_size=(img_height, img_width),
+        batch_size=batch_size,
+        label_mode=None  # Eventually changed
+    )
+
+    # print(train_ds)
+    train_ds = train_ds.take(100)
+    val_ds = val_ds.take(10)
+
+    # Tune the buffer size dynamically at runtime
+    AUTOTUNE = tf.data.AUTOTUNE
+
+    # cache() keeps images in memory after first epoch
+    # prefetch() overlaps image preprocessing and model execution (total time is max instead of sum)
+    train_ds = train_ds.cache().prefetch(buffer_size=AUTOTUNE)
+    val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
+
+    return (train_ds, val_ds, test_ds)
+
+
 def create_discriminator():
 
     # Test dropout a bit
 
     model = tf.keras.Sequential()
-    model.add(layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same',
-                            input_shape=[256, 256, 3]))
+    model.add(layers.Conv2D(64, (5, 5), strides=(2, 2),
+              padding='same', input_shape=(256, 256, 3)))
+    model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(0.3))
 
     model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding='same'))
+    model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(0.3))
 
@@ -46,27 +103,29 @@ def create_generator():
     # Transformation that maintains the mean output close to 0 and SD close to 1
     model.add(layers.BatchNormalization())
     # Question whether to have this before or after activation function
-    model.add(layers.LeakyReLU(alpha=0.2))
+    model.add(layers.ReLU())
 
-    model.add(layers.Reshape((32, 32, 64)))  # Question about rbg channels here
+    model.add(layers.Reshape((32, 32, 64)))
     print(model.output.shape)
 
     model.add(layers.Conv2DTranspose(32, (8, 8), strides=(2, 2),
               padding='same', use_bias=False))  # 32 64 x 64 filters
     print(model.output.shape)
     model.add(layers.BatchNormalization())
-    model.add(layers.LeakyReLU(alpha=0.2))
+    model.add(layers.ReLU())
 
-    model.add(layers.Conv2DTranspose(16, (12, 12), strides=(2, 2),
-              padding='same', use_bias=False))  # 16 128 * 128 filters
-    print(model.output.shape)
-    model.add(layers.BatchNormalization())
-    model.add(layers.LeakyReLU(alpha=0.2))
+    # model.add(layers.Conv2DTranspose(16, (12, 12), strides=(2, 2),
+      #        padding='same', use_bias=False))  # 16 128 * 128 filters
+    #print(model.output.shape)
+    #model.add(layers.BatchNormalization())
+    #model.add(layers.ReLU())
 
     # Important note: probably want more than one filter here, next layer defines final image
-    model.add(layers.Conv2DTranspose(16, (16, 16), strides=(2, 2),
-              padding='same', use_bias=False))  # 16 256 * 256 filters
+    model.add(layers.Conv2DTranspose(8, (16, 16), strides=(4, 4),
+              padding='same', use_bias=False))  # 8 256 * 256 filters
     print(model.output.shape)
+    model.add(layers.BatchNormalization())
+    model.add(layers.ReLU())
 
     # This output layer has 3 256 * 256 filters (rgb), tanh makes values between -1 and 1
     model.add(layers.Conv2D(3, (3, 3), activation='tanh', padding='same'))
@@ -76,26 +135,24 @@ def create_generator():
 
 
 generator = create_generator()
-
-noise = tf.random.normal([1, 100])
-generated_image = generator(noise, training=False)
-
-plt.imshow(generated_image[0, :, :, 0], cmap='gray')
-plt.show()
-
 discriminator = create_discriminator()
 
 # This method returns a helper function to compute cross entropy loss
+# NOTE: multiple labels changes this
 cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
-#
+# Calculates the total loss of the discriminator. Real images should be classified as 1, fake as 0? (thought it was -1 check this more)
 
 
 def discriminator_loss(real_output, fake_output):
+
+    # ones_like and zeros_like create a tensor of all 1s or 0s, same shape as the parameter
     real_loss = cross_entropy(tf.ones_like(real_output), real_output)
     fake_loss = cross_entropy(tf.zeros_like(fake_output), fake_output)
     total_loss = real_loss + fake_loss
     return total_loss
+
+# Calculates the loss of the generator. If the discriminator returns all 1's, it sees all the generated images as real, so there is no loss
 
 
 def generator_loss(fake_output):
@@ -109,7 +166,7 @@ discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
 BATCH_SIZE = 1
 EPOCHS = 1
 noise_dim = 100
-num_examples_to_generate = 16
+num_examples_to_generate = 1
 
 
 @tf.function  # This causes function to be "compiled", from tutorial
@@ -117,6 +174,9 @@ def train_step(images):
 
     # Random values in normal distribution between batch size and noise_dim
     noise = tf.random.normal([BATCH_SIZE, noise_dim])
+
+    gen_loss = 0
+    disc_loss = 0
 
     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
         generated_images = generator(noise, training=True)
@@ -138,14 +198,28 @@ def train_step(images):
     discriminator_optimizer.apply_gradients(
         zip(gradients_of_discriminator, discriminator.trainable_variables))
 
+    return (gen_loss, disc_loss)
+
 
 def train(dataset, epochs):
 
     for epoch in range(epochs):
+
         start = time.time()
+        x = 0
 
         for image_batch in dataset:
-            train_step(image_batch)
+
+            y = train_step(image_batch)
+
+            # Messily put these here to fine tune
+            print("Generator Loss:")
+            print(y[0])
+            print("Discriminator Loss:")
+            print(y[1])
+            print("step " + str(x) + "/100 completed")
+
+            x += 1
 
         print('Time for epoch {} is {} sec'.format(
             epoch + 1, time.time()-start))
@@ -162,3 +236,30 @@ def generate_images(model, test_input):
         plt.axis('off')
 
     plt.show()
+
+
+datasets = create_datasets()
+d = datasets[0]
+print(d)
+train(d, 1)
+
+def load_model(path_string):
+    model = 0
+    try:
+        model = tf.keras.models.load_model(path_string)
+    except (ImportError, IOError) as e:
+        print(e)
+        return None # bad
+    return model
+
+# can probably do this in command line
+def save_model(model, path_string):
+    model.save(path_string)
+
+def generate_random_image():
+    noise = tf.random.normal([1, 100])
+    generated_image = generator(noise, training=False)
+    plt.imshow(generated_image[0, :, :, 0])
+    plt.show()
+
+# generate_random_image()
