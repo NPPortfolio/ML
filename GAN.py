@@ -69,15 +69,15 @@ def create_discriminator():
     # Test dropout a bit
 
     model = tf.keras.Sequential()
-    model.add(layers.Conv2D(64, (5, 5), strides=(2, 2),
+    model.add(layers.Conv2D(16, (5, 5), strides=(2, 2),
               padding='same', input_shape=(256, 256, 3)))
     model.add(layers.BatchNormalization())
-    model.add(layers.LeakyReLU())
+    model.add(layers.LeakyReLU(alpha=0.2))
     model.add(layers.Dropout(0.3))
 
-    model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding='same'))
+    model.add(layers.Conv2D(32, (5, 5), strides=(2, 2), padding='same'))
     model.add(layers.BatchNormalization())
-    model.add(layers.LeakyReLU())
+    model.add(layers.LeakyReLU(alpha=0.2))
     model.add(layers.Dropout(0.3))
 
     model.add(tf.keras.layers.Flatten())
@@ -99,16 +99,16 @@ def create_generator():
 
     # NOTE: I think this input shape is where each label has to have some influence
     model = tf.keras.Sequential()
-    model.add(layers.Dense(64 * 32 * 32, input_shape=(100,), activation='relu'))
+    model.add(layers.Dense(16 * 32 * 32, input_shape=(100,), activation='relu'))
     # Transformation that maintains the mean output close to 0 and SD close to 1
     model.add(layers.BatchNormalization())
     # Question whether to have this before or after activation function
     model.add(layers.ReLU())
 
-    model.add(layers.Reshape((32, 32, 64)))
+    model.add(layers.Reshape((32, 32, 16)))
     print(model.output.shape)
 
-    model.add(layers.Conv2DTranspose(32, (8, 8), strides=(2, 2),
+    model.add(layers.Conv2DTranspose(8, (8, 8), strides=(2, 2),
               padding='same', use_bias=False))  # 32 64 x 64 filters
     print(model.output.shape)
     model.add(layers.BatchNormalization())
@@ -121,7 +121,7 @@ def create_generator():
     #model.add(layers.ReLU())
 
     # Important note: probably want more than one filter here, next layer defines final image
-    model.add(layers.Conv2DTranspose(8, (16, 16), strides=(4, 4),
+    model.add(layers.Conv2DTranspose(4, (16, 16), strides=(4, 4),
               padding='same', use_bias=False))  # 8 256 * 256 filters
     print(model.output.shape)
     model.add(layers.BatchNormalization())
@@ -160,8 +160,8 @@ def generator_loss(fake_output):
 
 
 # Each network trained separately, different optimizers
-generator_optimizer = tf.keras.optimizers.Adam(1e-4)
-discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
+generator_optimizer = tf.keras.optimizers.Adam(learning_rate=0.0002)
+discriminator_optimizer = tf.keras.optimizers.Adam(learning_rate=0.0002, beta_1=0.5) 
 
 BATCH_SIZE = 1
 EPOCHS = 1
@@ -241,7 +241,7 @@ def generate_images(model, test_input):
 datasets = create_datasets()
 d = datasets[0]
 print(d)
-train(d, 1)
+# train(d, 1)
 
 def load_model(path_string):
     model = 0
